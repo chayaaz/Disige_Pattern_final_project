@@ -1,0 +1,173 @@
+// --- Vehicle.java ---
+/**
+ * מחלקה המייצגת רכב בחניון.
+ * כוללת מספר רישוי, דגם, זמן כניסה ויציאה.
+ * מממשת תבנית Prototype (שכפול רכב).
+ */
+import java.time.LocalDateTime;
+
+public class Vehicle implements Cloneable {
+    private String plateNumber;
+    private String model;
+    private LocalDateTime entryTime;
+    private LocalDateTime exitTime;
+
+    /**
+     * בנאי בונה רכב חדש עם מספר רישוי ודגם.
+     */
+    public Vehicle(String plateNumber, String model) {
+        this.plateNumber = plateNumber;
+        this.model = model;
+    }
+
+    /**
+     * עדכון זמן כניסה לחניון.
+     */
+    public void enter() {
+        this.entryTime = LocalDateTime.now();
+    }
+
+    /**
+     * עדכון זמן יציאה מהחניון.
+     */
+    public void exit() {
+        this.exitTime = LocalDateTime.now();
+    }
+
+    /**
+     * חישוב משך החניה בדקות.
+     */
+    public double getParkingDurationMinutes() {
+        if (entryTime != null && exitTime != null) {
+            return java.time.Duration.between(entryTime, exitTime).toMinutes();
+        }
+        return 0;
+    }
+
+    public String getPlateNumber() {
+        return plateNumber;
+    }
+
+    public LocalDateTime getEntryTime() {
+        return entryTime;
+    }
+
+    public LocalDateTime getExitTime() {
+        return exitTime;
+    }
+
+    /**
+     * שכפול הרכב לפי תבנית Prototype.
+     */
+    @Override
+    public Vehicle clone() {
+        return new Vehicle(this.plateNumber + "_copy", this.model);
+    }
+
+    @Override
+    public String toString() {
+        return "רכב מס'" + plateNumber + " דגם: " + model;
+    }
+
+// --- VehicleFactory.java ---
+/**
+ * מחלקת מפעל המשמשת ליצירת רכבים לפי תבנית Factory Method.
+ */
+public class VehicleFactory {
+    /**
+     * יוצר רכב חדש עם מספר ודגם.
+     */
+    public static Vehicle createVehicle(String plate, String model) {
+        return new Vehicle(plate, model);
+    }
+}
+
+// --- ParkingLot.java ---
+/**
+ * מחלקת חניון חכם. מממשת תבנית Singleton.
+ * שומרת מידע על רכבים פעילים, היסטוריה ותמחור.
+ */
+import java.util.*;
+
+public class ParkingLot {
+    private static ParkingLot instance;
+    private int capacity;
+    private Map<String, Vehicle> vehiclesInside;
+    private List<Vehicle> history;
+    private double pricePerMinute = 1.5;
+
+    /**
+     * בנאי פרטי בהתאם לתבנית Singleton.
+     */
+    private ParkingLot(int capacity) {
+        this.capacity = capacity;
+        vehiclesInside = new HashMap<>();
+        history = new ArrayList<>();
+    }
+
+    /**
+     * מחזיר מופע יחיד של החניון.
+     */
+    public static ParkingLot getInstance(int capacity) {
+        if (instance == null) {
+            instance = new ParkingLot(capacity);
+        }
+        return instance;
+    }
+
+    /**
+     * הכנסת רכב לחניון.
+     */
+    public boolean enterParking(Vehicle v) {
+        if (vehiclesInside.size() >= capacity) {
+            System.out.println("החניון מלא.");
+            return false;
+        }
+        if (!vehiclesInside.containsKey(v.getPlateNumber())) {
+            v.enter();
+            vehiclesInside.put(v.getPlateNumber(), v);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * הוצאת רכב מהחניון עם חישוב עלות.
+     */
+    public boolean exitParking(String plate) {
+        Vehicle v = vehiclesInside.remove(plate);
+        if (v != null) {
+            v.exit();
+            history.add(v);
+            System.out.println("רכב יצא, עלות: " + calculateCost(v) + " ש"ח");
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * חישוב עלות חנייה לרכב.
+     */
+    public double calculateCost(Vehicle v) {
+        return v.getParkingDurationMinutes() * pricePerMinute;
+    }
+
+    /**
+     * הפקת דו"ח סטטיסטיקה כולל זמן ממוצע ורווח.
+     */
+    public String getStatisticsReport() {
+        double total = 0;
+        double avgTime = 0;
+        if (history.size() > 0) {
+            for (Vehicle v : history) {
+                total += calculateCost(v);
+                avgTime += v.getParkingDurationMinutes();
+            }
+            avgTime /= history.size();
+        }
+        return "סה"כ רכבים: " + history.size() +
+                "\nממוצע זמן חניה: " + avgTime +
+                "\nרווח כולל: " + total + " ש"ח";
+    }
+}
+
